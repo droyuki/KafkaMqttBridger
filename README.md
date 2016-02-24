@@ -1,5 +1,5 @@
 First create application.conf under src/resources/
 ```sh
-broker="tcp://IP:1883"
+broker="tcp://IP:PORT"
 ```
-Replace "IP" with your MQTT broker ip.
+Replace "IP" and "PORT" with your MQTT broker ip:port.
