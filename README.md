@@ -1,4 +1,4 @@
-First create application.conf under src/resources/
+Create application.conf under src/resources/
 ```sh
 broker="tcp://IP:PORT"
 ```
