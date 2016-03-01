@@ -14,6 +14,7 @@ libraryDependencies ++= Seq(
   "org.apache.kafka" % "kafka_2.11" % "0.8.2.2" excludeAll (
     ExclusionRule("jline", "jline")
     ),
+  "net.debasishg" %% "redisclient" % "3.0",
   "com.typesafe" % "config" % "1.3.0"
 )
 
