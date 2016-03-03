@@ -1,4 +1,4 @@
-package edu.nccu.iotlab.paho
+package edu.nccu.iotlab.mqtt
 
 import com.typesafe.config.ConfigFactory
 import org.eclipse.paho.client.mqttv3.{IMqttDeliveryToken, MqttMessage, MqttCallback, MqttClient}
@@ -11,7 +11,7 @@ object MqttSubscriber {
   def main(args: Array[String]) {
     val conf = ConfigFactory.load()
     val brokerUrl = conf.getString("broker")
-    val topic = "mqtt_test"
+    val topic = "mqtt"
 
     //Set up persistence for messages
     val persistence = new MemoryPersistence

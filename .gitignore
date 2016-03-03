@@ -58,3 +58,5 @@ Icon
 # Maven
 log/
 target/
+logs/
+*.log
