@@ -21,7 +21,7 @@ object SimpleBridge {
     val callback = new MqttCallback {
       override def messageArrived(topic: String, message: MqttMessage): Unit = {
         println("--------------- Message Arrived ---------------\nTopic : %s\nMessage : %s\n-----------------------------------------------".format(topic, message))
-        KafkaConn.getInstance().send(mTopic, message.toString)
+        KafkaProducer.getInstance().send(mTopic, message.toString)
       }
 
       override def connectionLost(cause: Throwable): Unit = {

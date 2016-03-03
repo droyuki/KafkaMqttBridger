@@ -8,7 +8,7 @@ import kafka.producer.{KeyedMessage, Producer, ProducerConfig}
 /**
   * Created by WeiChen on 2016/3/3.
   */
-class KafkaConn private(broker:String){
+class KafkaProducer private(broker:String){
   private val props = new Properties()
   props.put("metadata.broker.list", broker)
   props.put("serializer.class", "kafka.serializer.StringEncoder")
@@ -20,11 +20,11 @@ class KafkaConn private(broker:String){
     producer.send(data)
   }
 }
-object KafkaConn{
+object KafkaProducer{
   val conf = ConfigFactory.load()
   val kafkaBroker = conf.getString("kafkaBroker")
-  val kc = new KafkaConn(kafkaBroker)
-  def getInstance(): KafkaConn ={
+  val kc = new KafkaProducer(kafkaBroker)
+  def getInstance(): KafkaProducer ={
     kc
   }
 }
