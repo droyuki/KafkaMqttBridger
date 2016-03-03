@@ -15,7 +15,8 @@ libraryDependencies ++= Seq(
     ExclusionRule("jline", "jline")
     ),
   "net.debasishg" %% "redisclient" % "3.0",
-  "com.typesafe" % "config" % "1.3.0"
+  "com.typesafe" % "config" % "1.2.1",
+  "org.scalatest" %% "scalatest" % "2.2.4"
 )
 
 baseAssemblySettings
