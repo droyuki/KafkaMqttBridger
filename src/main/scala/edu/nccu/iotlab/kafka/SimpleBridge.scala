@@ -7,7 +7,7 @@ import org.eclipse.paho.client.mqttv3.persist.MemoryPersistence
 object SimpleBridge {
   def main(args: Array[String]) {
     if (args.length != 2) {
-      System.err.println("Usage: jar -cp mqttBridge.jat edu.nccu.iotlab.kafka.SimpleBridge <MQTt Topic> <Kafka Topic>")
+      System.err.println("Usage: jar -cp mqttBridge.jat edu.nccu.iotlab.kafka.SimpleBridge <MQTT Topic> <Kafka Topic>")
       System.exit(1)
     }
     val Array(mTopic, kTopic) = args.take(2)
