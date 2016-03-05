@@ -1,7 +1,7 @@
 package edu.nccu.iotlab.bridge
 
-import akka.actor.{ActorRef, Props, ActorSystem, Actor}
-import akka.event.Logging
+
+import akka.actor._
 import com.redis._
 import com.typesafe.config.ConfigFactory
 
@@ -9,50 +9,52 @@ import com.typesafe.config.ConfigFactory
   * Created by WeiChen on 2016/3/1.
   */
 case class SubscribeMessage(channels: List[String])
-
-case class UnsubscribeMessage(channels: List[String])
-
-case object GoDown
-sealed trait Mqtt
-case class Topic(t:String) extends Mqtt
-
-class TopicManager extends Actor {
-  println("starting bridge service ..")
-  val log = Logging(context.system, this)
-  val system = ActorSystem("kafkaMqttBridge")
+case class KafkaKilled(name:String)
+class TopicManager extends Actor with ActorLogging {
+  var childMap = Map.empty[String, ActorRef]
   val conf = ConfigFactory.load()
   val redisHost = conf.getString("redisHost")
   val redisPort = conf.getInt("redisPort")
   val r = new RedisClient(redisHost, redisPort)
-  val s = system.actorOf(Props(new Subscriber(r)))
+  val s = context.actorOf(Props(new Subscriber(r)))
   s ! Register(callback)
+
+  def getOrCreate(name: String) = childMap get name getOrElse {
+    val child = context.actorOf(Props[BridgeActor], name = name)
+    childMap += name -> child
+    context watch child
+    log.info(s"\n create bridge actor $name")
+    child
+  }
+
 
   def receive = {
     case SubscribeMessage(chs) => {
-      log.info("sub" + print(chs))
+      log.info("\nsub" + print(chs))
       sub(chs)
     }
-    case UnsubscribeMessage(chs) => {
-      log.info("unsub" + print(chs))
-      unsub(chs)
+    case KafkaKilled(name) => {
+      log.warning(s"Actor $name is going down...")
+      val child = context.actorSelection(name)
+      child ! PoisonPill
+      childMap -= name
+      println("[Topic list]"+childMap.keys.mkString(","))
+      //log.warning(s"Mqtt actor $name has been killed.")
     }
-    case GoDown =>
-      r.quit
-      system.shutdown()
-      system.awaitTermination()
 
-    case x => log.info("Got in Sub " + x)
+    case Terminated(child) => {
+      val name = child.path.name
+      log.info(s"Actor $name has been killed.")
+    }
+
+    case x => log.debug("Got: " + x)
   }
 
   def sub(channels: List[String]) = {
     s ! Subscribe(channels.toArray)
   }
 
-  def unsub(channels: List[String]) = {
-    s ! Unsubscribe(channels.toArray)
-  }
-
-  def callback(pubsub: PubSubMessage) = pubsub match {
+  def callback(callBack: PubSubMessage) = callBack match {
     case E(exception) => println("Fatal error caused consumer dead. Please init new consumer reconnecting to master or connect to backup")
     case S(channel, no) => println("subscribed to " + channel + " and count = " + no)
     case U(channel, no) => println("unsubscribed from " + channel + " and count = " + no)
@@ -63,25 +65,40 @@ class TopicManager extends Actor {
           println("unsubscribe all ..")
           r.unsubscribe
 
-        // message "+x" will subscribe to channel x
+        // message "+x" will subscribe to topic x
         case x if x startsWith "+" =>
           val s: Seq[Char] = x
           s match {
-            case Seq('+', rest@_*) => r.subscribe(rest.toString) { m => }
+            case Seq('+', topic@_*) => {
+              val name = topic.toString()
+              log.debug("[Redis]Get topic " + name)
+              val mqttSub = getOrCreate(name)
+              mqttSub ! StartProduce(name)
+              log.info("\n[Topic list]"+childMap.keys.mkString(","))
+            }
           }
 
-        // message "-x" will unsubscribe from channel x
+        // message "-x" will unsubscribe from topic x
         case x if x startsWith "-" =>
           val s: Seq[Char] = x
           s match {
-            case Seq('-', rest@_*) => r.unsubscribe(rest.toString)
+            case Seq('-', topic@_*) => {
+              if(childMap.contains(topic.toString())) {
+                val child = getOrCreate(topic.toString())
+                child ! Shutdown(topic.toString())
+              } else {
+                log.warning(s"Actor $topic not exist!")
+              }
+            }
           }
 
-        // other message receive
+        // check whether topic exist or not
         case x => {
-          println("[RedisSubActor]new topic detected : " + x)
-          val mqttSub = context.actorOf(Props[MqttSub], x)
-          mqttSub ! MqttTopicSub(x)
+          if (childMap.contains(x)) {
+            log.info(s"\nTopic $x exist!")
+          } else {
+            log.info(s"\nTopic $x not exist!")
+          }
         }
       }
   }
